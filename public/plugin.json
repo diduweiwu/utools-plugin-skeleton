@@ -1,0 +1,27 @@
+{
+  "development": {
+    "main": "http://127.0.0.1:5173/",
+    "preload": "preload.js"
+  },
+  "main": "index.html",
+  "preload": "preload.js",
+  "logo": "logo.png",
+  "features": [
+    {
+      "code": "密码盒",
+      "explain": "密码管理盒子",
+      "cmds": [
+        "password",
+        "pass",
+        "keep",
+        "secret",
+        {
+          "type": "over",
+          "label": "密码盒",
+          "minLength": 1,
+          "maxLength": 20
+        }
+      ]
+    }
+  ]
+}
