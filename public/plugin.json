@@ -1,25 +1,29 @@
 {
-  "development": {
-    "main": "http://127.0.0.1:5173/",
-    "preload": "preload.js"
-  },
+  "pluginName": "插件模板",
+  "version": "1.0.0",
+  "description": "基于 Vue 3 + Vite + TypeScript 的 uTools 插件模板",
+  "author": "your name",
   "main": "index.html",
   "preload": "preload.js",
   "logo": "logo.png",
+  "development": {
+    "main": "http://127.0.0.1:5173/"
+  },
   "features": [
     {
-      "code": "密码盒",
-      "explain": "密码管理盒子",
+      "code": "demo",
+      "explain": "模板示例：关键字进入",
+      "cmds": ["模板", "demo", "template"]
+    },
+    {
+      "code": "demo-over",
+      "explain": "模板示例：选中文字触发",
       "cmds": [
-        "password",
-        "pass",
-        "keep",
-        "secret",
         {
           "type": "over",
-          "label": "密码盒",
+          "label": "模板示例",
           "minLength": 1,
-          "maxLength": 20
+          "maxLength": 50
         }
       ]
     }
