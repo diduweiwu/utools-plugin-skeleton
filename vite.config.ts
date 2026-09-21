@@ -1,32 +1,31 @@
-import { fileURLToPath, URL } from 'node:url'
+import { fileURLToPath, URL } from "node:url";
 
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import Components from 'unplugin-vue-components/vite'
-import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
+import vue from "@vitejs/plugin-vue";
+import AutoImport from "unplugin-auto-import/vite";
+import Components from "unplugin-vue-components/vite";
+import { NaiveUiResolver } from "unplugin-vue-components/resolvers";
+import { defineConfig } from "vite";
 
-// uTools 以相对路径加载打包产物，base 必须保持 './'
+// https://vite.dev/config/
 export default defineConfig({
-  base: './',
   plugins: [
     vue(),
+    // vue API 自动按需导入(ref/computed/watch 等),类型声明生成到 src/types/auto-imports.d.ts
+    AutoImport({
+      imports: ["vue"],
+      dts: "src/types/auto-imports.d.ts",
+    }),
+    // 模板里直接使用 naive-ui 组件,按需自动注册并生成 src/types/components.d.ts
     Components({
       resolvers: [NaiveUiResolver()],
-      dts: 'components.d.ts',
+      dts: "src/types/components.d.ts",
     }),
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-  server: {
-    // 显式绑定 IPv4：uTools 通过 http://127.0.0.1:5173/ 访问开发页面，
-    // 而 Vite 默认的 localhost 在部分系统上只解析到 IPv6，会导致 uTools 加载失败
-    host: '127.0.0.1',
-    // 端口固定为 5173，与 public/plugin.json 中 development.main 保持一致，
-    // 端口被占用时直接报错而不是自动顺延，避免 uTools 加载到错误的地址
-    port: 5173,
-    strictPort: true,
-  },
-})
+  // uTools/ztools 以 file:// 协议加载打包产物,必须使用相对路径
+  base: "./",
+});

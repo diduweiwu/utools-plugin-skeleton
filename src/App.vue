@@ -1,43 +1,24 @@
 <script setup lang="ts">
-import { zhCN, dateZhCN } from 'naive-ui'
-import { useRouter } from 'vue-router'
+import { computed } from "vue";
+import { darkTheme, useOsTheme } from "naive-ui";
 
-import AppHeader from '@/components/AppHeader.vue'
-import { useTheme } from '@/composables/useTheme'
-import { usePluginEnter } from '@/composables/usePluginEnter'
-import { getFeatureRoute } from '@/router'
-import { useAppStore } from '@/stores/app'
+import HomeView from "@/views/HomeView.vue";
 
-const router = useRouter()
-const appStore = useAppStore()
-const { theme } = useTheme()
+/**
+ * 应用外壳:只负责主题与全局消息容器。
+ * naive-ui 的 useMessage 只能在 <n-message-provider> 的【后代】组件的 setup 里调用,
+ * 所以页面内容拆分到 HomeView.vue,避免在 provider 之上使用消息 API。
+ */
+const osTheme = useOsTheme();
 
-// 插件进入：记录动作信息，并按 feature code 跳转对应页面
-usePluginEnter((action) => {
-  appStore.setEnterAction(action)
-  const path = getFeatureRoute(action.code)
-  if (path && path !== router.currentRoute.value.path) {
-    router.push(path)
-  }
-})
+/** 跟随系统明暗主题 */
+const theme = computed(() => (osTheme.value === "dark" ? darkTheme : null));
 </script>
 
 <template>
-  <n-config-provider :theme="theme" :locale="zhCN" :date-locale="dateZhCN">
-    <n-message-provider placement="top" :duration="2000">
-      <n-dialog-provider>
-        <n-layout position="absolute">
-          <AppHeader />
-          <n-layout
-            position="absolute"
-            style="top: 48px"
-            :native-scrollbar="false"
-            content-style="padding: 16px;"
-          >
-            <router-view />
-          </n-layout>
-        </n-layout>
-      </n-dialog-provider>
+  <n-config-provider :theme="theme">
+    <n-message-provider placement="top" container-style="margin-top: 40px" :duration="1500">
+      <HomeView />
     </n-message-provider>
   </n-config-provider>
 </template>

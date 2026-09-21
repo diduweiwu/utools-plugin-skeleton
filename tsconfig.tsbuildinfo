@@ -1,0 +1,1 @@
+{"root":["./src/env.d.ts","./src/main.ts","./src/composables/use-storage.spec.ts","./src/composables/use-storage.ts","./src/platform/index.ts","./src/platform/window.d.ts","./src/types/auto-imports.d.ts","./src/types/components.d.ts","./src/app.vue","./src/views/homeview.vue"],"version":"5.9.3"}

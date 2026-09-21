@@ -1,17 +1,7 @@
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
+import { createApp } from "vue";
 
-import App from './App.vue'
-import router from './router'
-import { useAppStore } from '@/stores/app'
-import '@/assets/styles/index.css'
+import App from "./App.vue";
+import "./styles/main.css";
 
-const app = createApp(App)
-
-app.use(createPinia())
-app.use(router)
-
-// 恢复本地持久化设置（依赖 pinia，需在其安装之后调用）
-useAppStore().init()
-
-app.mount('#app')
+// naive-ui 组件由 unplugin-vue-components 按需自动注册,无需手动安装
+createApp(App).mount("#app");

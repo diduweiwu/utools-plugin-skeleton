@@ -1,157 +1,123 @@
 # utools-plugin-skeleton
 
-基于 **Vue 3 + Vite + TypeScript + Naive UI** 的 uTools 插件开发骨架，开箱即用地解决了 uTools 插件工程化开发中的常见问题（开发热更新、打包产物、API 封装、页面路由、本地持久化），clone 后按「初始化自己的插件」一节改造即可开始业务开发。
+uTools / ZTools 双平台通用插件脚手架,基于 Vue 3 + TypeScript + Vite + naive-ui。
 
-## 功能特性
+两个平台的插件规范基本一致(`plugin.json` + `preload` + 渲染页面,仅全局 API 对象名不同),
+本仓库用**一套源码**同时适配:平台桥接层统一识别、preload 双平台兼容、清单字段两边通用,
+开发、构建、发布的完整链路均已按官方文档打通。
 
-- ⚡ **Vite 开发体验**：开发模式由 uTools 加载 Vite dev server，保存即热更新，无需反复手动构建
-- 🔒 **TypeScript 全量类型**：内置 [`utools-api-types`](https://www.npmjs.com/package/utools-api-types)，`utools.*` API 全程类型提示与校验
-- 🧩 **分层架构**：`services / stores / composables / views` 职责分离，uTools 环境依赖收敛到唯一出口，可维护、可单测
-- 🎨 **Naive UI 按需自动引入**：模板里直接写 `<n-*>` 组件即可，无需手动注册，天然 tree-shaking
-- 🌗 **主题系统**：支持 跟随系统 / 浅色 / 深色 三种模式，设置项持久化到 uTools 本地数据库（db）
-- 🔀 **多 feature 路由分发**：`plugin.json` 的 feature code 与前端路由解耦映射，关键字进入、选中文字进入（over）都能直达对应页面
-- 🌐 **HTTP 封装**：内置统一的 axios 实例（超时、拦截器、错误归一化）
+## 快速开始
 
-## 技术选型
+要求 Node.js `^20.19.0 || >=22.12.0`。
 
-| 分类 | 技术 | 版本 | 说明 |
-| --- | --- | --- | --- |
-| 视图框架 | [Vue](https://vuejs.org/) | ^3.5 | 全部使用 `<script setup>` 组合式 API |
-| 构建工具 | [Vite](https://vite.dev/) | ^8 | `base: './'` 适配 uTools 的 file 协议加载 |
-| 开发语言 | [TypeScript](https://www.typescriptlang.org/) | ~5.9 | 严格模式，`vue-tsc` 负责模板类型检查 |
-| UI 组件库 | [Naive UI](https://www.naiveui.com/) | ^2.45 | 按需自动引入（`unplugin-vue-components` + `NaiveUiResolver`） |
-| 路由 | [Vue Router](https://router.vuejs.org/) | ^5 | hash 模式（uTools 以 file 协议加载页面，history 模式会 404） |
-| 状态管理 | [Pinia](https://pinia.vuejs.org/) | ^4 | 示例 store 演示了设置项 + uTools db 持久化 |
-| HTTP | [axios](https://axios-http.com/) | ^1.20 | 统一实例见 `src/services/http.ts` |
-| uTools 类型 | [utools-api-types](https://www.npmjs.com/package/utools-api-types) | ^7 | 全局 `utools` 变量的完整类型定义 |
+```bash
+npm install            # 安装依赖
+npm run dev            # 本地开发(vite dev server,配合 uTools/ZTools 开发模式)
+npm run build          # 类型检查 + 打包到 dist/(即完整插件目录)
+npm run lint           # ESLint 检查
+npm run format         # Prettier 格式化
+npm run test           # Vitest 单元测试
+npm run ztools:publish # 发布到 ZTools 插件市场(见下文)
+```
+
+工程约定:
+
+- **全量 TypeScript strict 模式**,业务代码与组件均为 `.ts` / `<script setup lang="ts">`;
+- **ESLint(flat config) + Prettier** 负责代码质量与格式,提交前跑 `npm run lint`;
+- `vue` API(`ref`/`computed` 等)由 `unplugin-auto-import` 自动导入,
+  naive-ui 组件由 `unplugin-vue-components` 按需自动注册,无需手动 import/安装;
+- 路径别名 `@` 指向 `src/`;
+- 单元测试文件与被测模块同目录,命名为 `*.spec.ts`;
+- 对外发版的更新日志写在 `CHANGELOG.md`(严格 `## 版本号 - YYYY-MM-DD` 格式,`ztools publish` 发布时强制校验);
+- 推送/PR 时 GitHub Actions 自动执行 lint → 类型检查 → 测试 → 构建。
 
 ## 目录结构
 
 ```text
-├── public/                     # 不经 Vite 处理，构建时原样拷贝到 dist/
-│   ├── plugin.json             # uTools 插件清单（feature 定义在此）
-│   ├── preload.js              # preload 脚本，可使用 Node.js / Electron 能力
-│   └── logo.png                # 插件 logo
-├── src/
-│   ├── main.ts                 # 入口：装配 pinia / router，恢复持久化设置
-│   ├── App.vue                 # 根组件：naive-ui 全局 Provider + 布局 + 进入事件分发
-│   ├── assets/styles/          # 全局样式（仅重置，颜色交给组件库主题）
-│   ├── components/             # 通用组件（AppHeader 等）
-│   ├── views/                  # 页面级组件，按业务模块分目录
-│   │   ├── home/HomeView.vue
-│   │   └── settings/SettingsView.vue
-│   ├── router/index.ts         # hash 路由 + feature code → 路由映射表
-│   ├── stores/app.ts           # Pinia 全局状态（主题模式、进入信息）
-│   ├── composables/            # 组合式函数（useTheme / usePluginEnter）
-│   ├── services/
-│   │   ├── utools.ts           # uTools API 统一出口（业务代码禁止直接用全局 utools）
-│   │   └── http.ts             # axios 统一实例
-│   └── types/env.d.ts          # Vite 客户端类型声明
-├── index.html                  # Vite 入口 HTML
-├── vite.config.ts              # 别名 @ → src、端口 5173、组件自动引入
-└── tsconfig.json
+src/
+├── main.ts                     # 应用入口(naive-ui 组件自动按需注册)
+├── App.vue                     # 应用外壳:跟随系统主题 + 全局消息容器
+├── styles/main.css             # 全局样式(含明暗两套背景)
+├── types/                      # 自动生成的组件/API 声明(unplugin 维护,勿手改)
+├── platform/                   # 平台桥接层
+│   ├── index.ts                # 全项目唯一触碰平台 API 的地方,同一套代码适配 uTools/Ztools
+│   └── window.d.ts             # preload 注入到 window 的能力声明
+├── composables/
+│   └── use-storage.ts          # dbStorage JSON 读写封装(平台未就绪时安全兜底)
+└── views/
+    └── HomeView.vue            # 通用示例页(见下文「示例页演示了什么」)
+
+public/                         # 插件根目录,构建时原样拷贝进 dist/
+├── plugin.json                 # 插件清单(uTools/ZTools 双平台通用字段 + 官方 $schema)
+├── logo.png
+└── preload/
+    ├── package.json            # 固定 CommonJS
+    └── services.js             # preload 示例:直接 require node 内置模块,挂载 window 能力
 ```
 
-## 快速开始
+> 注意:`src/`(前端源码)与 `public/`(插件清单/preload)各司其职,前者经 Vite 编译、
+> 后者原样拷贝,共同组成 `dist/` 这一个插件目录——项目里只有这一套插件根目录约定。
 
-### 环境要求
+## 示例页演示了什么
 
-- Node.js ≥ 20.19（推荐 22 LTS）
-- [uTools](https://u.tools/) 及其内置的「uTools 开发者工具」插件
+`src/views/HomeView.vue` 是接入自己业务的起点,覆盖了脚手架接好的全部平台能力:
 
-### 安装
+- **平台识别**:当前运行在 ztools / uTools / 未注入(浏览器模拟);
+- **生命周期**:`onPluginEnter`(关键词与 over 选中文字两种触发,payload 展示)、`onPluginOut`;
+- **副输入框**:`setSubInput` 内容实时回显;
+- **持久化**:`dbStorage` 经 `use-storage` 封装读写,退出重进不丢;
+- **系统能力**:系统通知、复制到剪贴板;
+- **preload Node 能力**:读写用户数据目录下的文本文件、在文件管理器中定位。
 
-```bash
-npm install
-```
+## 平台支持
 
-### 开发调试
+同一套代码同时适配 **uTools** 与 **ztools**:
 
-1. 启动开发服务器（热更新）：
+- 平台 API 在 `src/platform/index.ts` 统一识别(`utools` / `ztools` 全局),preload 同样做了双平台兼容;
+- `public/plugin.json` 同时包含两个平台的清单字段(pluginName / name、title 等),关键字两边通用;
+- 插件标识是通用占位名(`plugin-skeleton`),改成自己的名字见下文。
 
-   ```bash
-   npm run dev
-   ```
+## ZTools 插件开发工作流
 
-2. 构建一次产物，让 `dist/` 就绪（`dist/` 是 uTools 开发者工具要引用的插件目录）：
+对照 [ZTools 官方开发文档](https://github.com/ZToolsCenter/ZTools-doc)接入,ZTools 与 uTools 的插件规范基本一致,以下均已打通:
 
-   ```bash
-   npm run build
-   ```
+**类型提示** —— `@ztools-center/ztools-api-types` 同时提供 API 类型与清单校验:
+tsconfig `types` 引入全局 `ZToolsApi` 与 `ztools` 声明;`public/plugin.json` 的 `$schema`
+指向包内 `ztools.schema.json`,编辑器可对清单字段做校验与悬浮提示。
 
-3. 打开 uTools 的「开发者工具」，新建项目，**项目目录选择 `dist/`**，然后运行插件。
+**开发调试** —— `npm run dev` 启动 Vite(端口 5173)后,在 ZTools 的开发者工具里
+添加开发项目并选择 `public/plugin.json` 即可(uTools 开发者模式同理):
+`development.main` 会让宿主以 `http://localhost:5173` 加载页面,保存即热更新;
+preload 始终走 `public/preload/services.js`,改它需要在开发者工具里「重载插件」。
 
-   `dist/plugin.json` 中的 `development.main` 指向 `http://127.0.0.1:5173/`，
-   开发者工具会加载 Vite dev server 页面，此后修改 `src/` 代码保存即热更新。
+**构建产物** —— `npm run build` 输出的 `dist/` 就是完整的插件应用目录
+(`index.html` + `assets/` + `plugin.json` + `preload/` + `logo.png`),直接拿这个文件夹
+安装/分发即可;注意不要把整个项目根目录打包进去。`base: './'` 相对路径已适配宿主的 `file://` 加载。
 
-   > 只改前端代码无需重新构建；如果改了 `public/`（如 `plugin.json`、`preload.js`），
-   > 需要重新执行 `npm run build`（可另开终端用 `npm run build:watch` 自动重建）。
+**发布到插件市场** —— `npm run ztools:publish`(官方 [@ztools-center/plugin-cli](https://github.com/ZToolsCenter/ztools-plugin-cli)):
 
-4. 体验示例功能：uTools 搜索框输入关键字 **demo** / **模板** 进入插件；或选中一段文字后选择「模板示例」进入。
+1. CLI 自动识别本项目的 `public/plugin.json`(官方三种支持位置之一,本项目只用这一种,不存在两套目录);
+2. 前置校验:git 工作区必须干净,且 `CHANGELOG.md` 存在当前版本的 `## 版本号 - YYYY-MM-DD` 小节(格式严格);
+3. 首次发布走 GitHub OAuth 授权,CLI 自动 fork `ZToolsCenter/ZTools-plugins`、以源码形式同步并创建 Draft PR(自动排除 node_modules/dist);
+4. 发布后手动完成三件事才会进入审核:PR 里附截图/演示 GIF、勾选自检清单、切到 Ready for review。
 
-### 打包发布
+## 改成你自己的插件
 
-开发完成后，在 uTools 开发者工具中打开指向 `dist/` 的项目，点击「打包」即可生成发布包。
-`plugin.json` 中的 `development` 字段仅在开发模式生效，打包时会被自动忽略。
+仓库内的插件标识是通用的占位名(`plugin-skeleton`),基于它开发自己的插件时,把以下字段改成你自己的信息即可:
 
-## 初始化自己的插件
+| 文件                           | 字段                                 | 说明                                                                            |
+| ------------------------------ | ------------------------------------ | ------------------------------------------------------------------------------- |
+| `public/plugin.json`           | `name`                               | 插件唯一 ID,同时也是 ZTools 市场目录名,发布后不可变更                           |
+| `public/plugin.json`           | `pluginName` / `title`               | 插件展示名称                                                                    |
+| `public/plugin.json`           | `description` / `author` / `version` | 描述、作者、版本号                                                              |
+| `public/plugin.json`           | `features[].code` / `cmds`           | 功能标识与触发词,按你的功能语义修改                                             |
+| `package.json`                 | `name` / `description`               | npm 包名,建议与插件 ID 保持一致                                                 |
+| `index.html`                   | `<title>`                            | 页面标题                                                                        |
+| `logo.svg` / `public/logo.png` | 整个文件                             | 默认图标:改 `logo.svg` 的配色/造型后重新导出 512×512 PNG 覆盖 `public/logo.png` |
 
-clone 本骨架后，按下面清单替换模板内容：
+`src/views/HomeView.vue` 与 `public/preload/services.js` 是两段通用示例,可以直接改写成你的业务;
+平台桥接层 `src/platform/` 与清单结构保持原样即可,新增平台 API 时在桥接层补对应封装。
 
-1. **`package.json`**：修改 `name`、`version` 等元信息；
-2. **`public/plugin.json`**：这是 uTools 插件的身份证，必须修改：
-   - `pluginName` / `description` / `author`：插件名称、描述、作者；
-   - `features`：定义插件入口。`code` 是功能唯一标识，`cmds` 定义触发方式——
-     字符串数组表示 uTools 关键字，`{ "type": "over" }` 表示选中文字触发，
-     其余类型（`img` / `files` / `regex` / `window`）见[官方文档](https://developer.u-tools.cn/develop/guide/plugin/)；
-3. **注册路由**：在 `src/router/index.ts` 的 `FEATURE_ROUTE_MAP` 中，把新的 feature code 指向对应页面路由，并在 `routes` 里新增页面；
-4. **替换 logo**：替换 `public/logo.png`（建议 512×512）；
-5. **业务开发**：
-   - 需要调 uTools 能力（复制、通知、窗口、db 等）→ 在 `src/services/utools.ts` 中补充封装后使用；
-   - 需要全局状态 → 在 `src/stores/` 下新增 store；
-   - 需要请求外部接口 → 使用 `src/services/http.ts` 导出的实例；
-   - 删除或改造示例页面 `src/views/home` / `src/views/settings`，以及 `AppHeader.vue` 中的导航项。
+## 更新日志
 
-## 分层架构说明
-
-```text
-views（页面）
-  │  只关心展示与交互
-  ▼
-composables / stores（逻辑与状态）
-  │  组合式函数封装可复用逻辑，store 管理全局状态
-  ▼
-services（外部能力出口）
-  │  utools.ts：uTools API 唯一入口
-  │  http.ts：HTTP 请求唯一入口
-  ▼
-public/preload.js（Node / Electron 能力）
-```
-
-- **解耦原则**：`views`、`stores` 不直接访问全局 `utools`，一律经 `src/services/utools.ts`。这样对 uTools 环境的依赖只有一处，单测 mock 该模块即可，未来换运行环境也只改一个文件；
-- **事件流**：`App.vue` 通过 `usePluginEnter` 订阅一次插件进入事件 → 写入 store 的 `enterAction` → 按 `FEATURE_ROUTE_MAP` 跳转页面；各页面读 store 即可感知进入信息。
-
-## 常用命令
-
-| 命令 | 说明 |
-| --- | --- |
-| `npm run dev` | 启动 Vite 开发服务器（127.0.0.1:5173，端口被占用会直接报错） |
-| `npm run build` | 类型检查 + 构建产物到 `dist/` |
-| `npm run build:watch` | 监听模式构建（修改 `public/` 后自动重建） |
-| `npm run typecheck` | 仅执行 `vue-tsc` 类型检查 |
-| `npm run preview` | 本地预览构建产物 |
-
-## 常见问题
-
-**为什么用 hash 路由？**
-uTools 以 file 协议加载 `dist/index.html`，history 路由在刷新或直接访问子路径时会 404，必须使用 hash 模式。
-
-**为什么 dev server 固定绑定 127.0.0.1？**
-`plugin.json` 的 `development.main` 写死了 `http://127.0.0.1:5173/`；Vite 默认监听的 `localhost` 在部分系统只解析到 IPv6，会导致 uTools 加载失败，因此 `vite.config.ts` 显式绑定 IPv4 并开启 `strictPort`。
-
-**能在浏览器里直接调试吗？**
-可以。`npm run dev` 后直接访问 <http://127.0.0.1:5173/>，`services/utools.ts` 检测到非 uTools 环境会自动降级为 no-op，页面可正常渲染（uTools 相关能力不生效）。
-
-## LICENSE
-
-[MIT](./LICENSE)
+见 [CHANGELOG.md](CHANGELOG.md)。

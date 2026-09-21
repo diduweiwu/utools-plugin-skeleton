@@ -1,31 +1,42 @@
 {
-  "pluginName": "插件模板",
+  "$schema": "node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
+  "pluginName": "插件骨架",
+  "name": "plugin-skeleton",
+  "title": "插件骨架",
+  "description": "uTools / ZTools 双平台插件脚手架,演示生命周期、存储、preload 等 API 的通用用法",
+  "author": "被时间思牵",
   "version": "1.0.0",
-  "description": "基于 Vue 3 + Vite + TypeScript 的 uTools 插件模板",
-  "author": "your name",
   "main": "index.html",
-  "preload": "preload.js",
+  "preload": "preload/services.js",
   "logo": "logo.png",
   "development": {
-    "main": "http://127.0.0.1:5173/"
+    "main": "http://localhost:5175",
+    "preload": "preload/services.js"
   },
   "features": [
     {
-      "code": "demo",
-      "explain": "模板示例：关键字进入",
-      "cmds": ["模板", "demo", "template"]
+      "code": "hello",
+      "explain": "脚手架示例:关键词进入,展示平台 API 与生命周期的通用用法",
+      "icon": "logo.png",
+      "cmds": ["hello", "你好"]
     },
     {
-      "code": "demo-over",
-      "explain": "模板示例：选中文字触发",
+      "code": "over-demo",
+      "explain": "脚手架示例:选中文字后触发,演示 payload 的接收",
+      "icon": "logo.png",
       "cmds": [
         {
           "type": "over",
-          "label": "模板示例",
+          "label": "插件骨架:处理选中文本",
           "minLength": 1,
-          "maxLength": 50
+          "maxLength": 100
         }
       ]
     }
+  ],
+  "platform": [
+    "darwin",
+    "win32",
+    "linux"
   ]
 }
