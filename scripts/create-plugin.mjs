@@ -15,6 +15,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 /** 脚手架自身根目录(脚本位于 <root>/scripts/) */
 const SCAFFOLD_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
+/** 生成默认父目录:脚手架同级,避免新项目嵌套在脚手架 git 仓库内部 */
+const DEFAULT_PARENT = path.dirname(SCAFFOLD_ROOT);
+
 // ==================== 纯逻辑(供生成与单测复用) ====================
 
 /** 插件唯一 ID:小写字母开头,仅小写字母/数字/连字符(同时是 ZTools 市场目录名) */
@@ -193,9 +196,10 @@ async function main() {
   const askLine = (question, options) => ask(prompter, question, options);
   console.log("插件脚手架生成器 —— 直接回车使用括号内的默认值,Ctrl+C 退出\n");
 
-  const targetInput = await askLine("目标目录名(插件将生成到这个新目录)");
-  const target = path.resolve(process.cwd(), targetInput);
+  const targetInput = await askLine(`目标目录名(默认生成在 ${DEFAULT_PARENT} 下,也可输入绝对路径)`);
+  const target = path.resolve(DEFAULT_PARENT, targetInput);
   assertTargetAvailable(target);
+  console.log(`→ 将生成到 ${target}\n`);
 
   const answers = {
     id: await askLine("插件唯一 ID(name,小写字母/数字/连字符)", {
