@@ -17,6 +17,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "test": "vitest run",
+    "create": "node scripts/create-plugin.mjs",
     "ztools:publish": "ztools publish"
   },
   "dependencies": {

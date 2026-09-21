@@ -1,4 +1,4 @@
-const fs = require('fs')
+const fs = require('node:fs')
 
 // 同一套 preload 同时服务 uTools 与 ztools,运行时识别平台全局对象
 const getApi = () => globalThis.ztools ?? globalThis.utools

@@ -12,6 +12,7 @@ uTools / ZTools 双平台通用插件脚手架,基于 Vue 3 + TypeScript + Vite 
 
 ```bash
 npm install            # 安装依赖
+npm run create         # 交互式生成一套新插件源码到指定目录(见下文)
 npm run dev            # 本地开发(vite dev server,配合 uTools/ZTools 开发模式)
 npm run build          # 类型检查 + 打包到 dist/(即完整插件目录)
 npm run lint           # ESLint 检查
@@ -75,33 +76,63 @@ public/                         # 插件根目录,构建时原样拷贝进 dist/
 
 - 平台 API 在 `src/platform/index.ts` 统一识别(`utools` / `ztools` 全局),preload 同样做了双平台兼容;
 - `public/plugin.json` 同时包含两个平台的清单字段(pluginName / name、title 等),关键字两边通用;
-- 插件标识是通用占位名(`plugin-skeleton`),改成自己的名字见下文。
+- 插件标识是通用占位名(`plugin-skeleton`),改成自己的名字见下文;
+- 双平台是硬性约定:`scripts/platform-parity.spec.mjs` 在 CI 中持续校验清单双平台必需字段、
+  preload 零第三方依赖、桥接层/preload 双全局识别,任何一侧缺失都会导致测试失败。
 
-## ZTools 插件开发工作流
+## 开发调试与发布(uTools / ZTools)
 
-对照 [ZTools 官方开发文档](https://github.com/ZToolsCenter/ZTools-doc)接入,ZTools 与 uTools 的插件规范基本一致,以下均已打通:
+对照 [ZTools 官方开发文档](https://github.com/ZToolsCenter/ZTools-doc)接入,两个平台的插件规范基本一致,以下均已打通:
 
 **类型提示** —— `@ztools-center/ztools-api-types` 同时提供 API 类型与清单校验:
 tsconfig `types` 引入全局 `ZToolsApi` 与 `ztools` 声明;`public/plugin.json` 的 `$schema`
 指向包内 `ztools.schema.json`,编辑器可对清单字段做校验与悬浮提示。
 
-**开发调试** —— `npm run dev` 启动 Vite(端口 5173)后,在 ZTools 的开发者工具里
-添加开发项目并选择 `public/plugin.json` 即可(uTools 开发者模式同理):
-`development.main` 会让宿主以 `http://localhost:5173` 加载页面,保存即热更新;
-preload 始终走 `public/preload/services.js`,改它需要在开发者工具里「重载插件」。
+**开发调试** —— `npm run dev` 启动 Vite(端口 5173)后:
+
+- **ZTools**:开发者工具里添加开发项目并选择 `public/plugin.json`;
+- **uTools**:开发者工具里新建项目选择 `public/plugin.json`,二者等价。
+
+两个平台都会经 `development.main` 以 `http://localhost:5173` 加载页面,保存即热更新;
+preload 始终走 `public/preload/services.js`,改它需要在各自开发者工具里「重载插件」。
 
 **构建产物** —— `npm run build` 输出的 `dist/` 就是完整的插件应用目录
 (`index.html` + `assets/` + `plugin.json` + `preload/` + `logo.png`),直接拿这个文件夹
 安装/分发即可;注意不要把整个项目根目录打包进去。`base: './'` 相对路径已适配宿主的 `file://` 加载。
 
-**发布到插件市场** —— `npm run ztools:publish`(官方 [@ztools-center/plugin-cli](https://github.com/ZToolsCenter/ztools-plugin-cli)):
+**发布到插件市场** —— 两个平台各自的通道:
 
-1. CLI 自动识别本项目的 `public/plugin.json`(官方三种支持位置之一,本项目只用这一种,不存在两套目录);
-2. 前置校验:git 工作区必须干净,且 `CHANGELOG.md` 存在当前版本的 `## 版本号 - YYYY-MM-DD` 小节(格式严格);
-3. 首次发布走 GitHub OAuth 授权,CLI 自动 fork `ZToolsCenter/ZTools-plugins`、以源码形式同步并创建 Draft PR(自动排除 node_modules/dist);
-4. 发布后手动完成三件事才会进入审核:PR 里附截图/演示 GIF、勾选自检清单、切到 Ready for review。
+- **ZTools 市场**:`npm run ztools:publish`(官方 [@ztools-center/plugin-cli](https://github.com/ZToolsCenter/ztools-plugin-cli)):
+  1. CLI 自动识别本项目的 `public/plugin.json`(官方三种支持位置之一,本项目只用这一种,不存在两套目录);
+  2. 前置校验:git 工作区必须干净,且 `CHANGELOG.md` 存在当前版本的 `## 版本号 - YYYY-MM-DD` 小节(格式严格);
+  3. 首次发布走 GitHub OAuth 授权,CLI 自动 fork `ZToolsCenter/ZTools-plugins`、以源码形式同步并创建 Draft PR(自动排除 node_modules/dist);
+  4. 发布后手动完成三件事才会进入审核:PR 里附截图/演示 GIF、勾选自检清单、切到 Ready for review。
+- **uTools 市场**:`npm run build` 后,在 uTools 开发者后台创建插件应用,用 `dist/` 目录打包并提交审核(流程以 uTools 官方开发者文档为准)。
+
+## 一键生成新插件
+
+不用手动复制改名,在本脚手架目录里运行:
+
+```bash
+npm run create                    # 交互式询问,生成到指定目录
+npm run create -- my-plugin       # 直接指定目标目录,其余信息仍会询问
+```
+
+生成器会依次询问 目标目录 / 插件唯一 ID / 展示名称 / 描述 / 作者 / 版本号 / 首个功能触发词,
+然后把脚手架复制到新目录(自动排除 node_modules、dist、.git),并完成所有标识替换:
+
+- `package.json` 的 `name` / `description` / `version`;
+- `public/plugin.json` 的 `name` / `pluginName` / `title` / `description` / `author` / `version`,
+  提供了触发词时同步替换首个功能的 `cmds`;
+- `index.html` 的 `<title>`;`README.md` 与 `CHANGELOG.md` 生成为新项目的精简版
+  (CHANGELOG 自带满足 `ztools publish` 校验的版本小节)。
+
+最后自动 `git init` 并创建初始提交,新目录里 `npm install` 后即可直接开发;
+开发调试与发布步骤与脚手架完全一致,见上文工作流。
 
 ## 改成你自己的插件
+
+> 下面的手动改名流程已由 `npm run create` 自动完成,仅供手动维护时参照。
 
 仓库内的插件标识是通用的占位名(`plugin-skeleton`),基于它开发自己的插件时,把以下字段改成你自己的信息即可:
 
