@@ -1,5 +1,3 @@
-import type { DownloadOptions } from "@/sources/types";
-
 /**
  * 平台桥接层 —— 项目中所有平台 API 与 preload 注入能力的【唯一】出口。
  *
@@ -85,18 +83,6 @@ export const getPath = (key: Parameters<PlatformApi["getPath"]>[0]): string => g
 /** 用户数据目录 */
 export const userDataDirectory = (): string => getPath("userData");
 
-/** 收藏目录(preload 会在不存在时自动创建) */
-export const collectedDirectory = (): string => window.checkOrCreateCollectedDirectory();
-
-/** 确保目录存在,不存在则创建,返回目录路径 */
-export const checkOrCreateDirectory = (path: string): string => window.checkOrCreateDirectory(path);
-
-/** 根据图片链接计算本地缓存文件路径 */
-export const composeFilePath = (url: string): string => window.composeFilePath(url);
-
-/** 根据图片链接计算收藏目录内的本地文件路径 */
-export const composeCollectedFilePath = (url: string): string => window.composeCollectedFilePath(url);
-
 // ==================== 插件生命周期/输入 ====================
 
 /** 注册插件副输入框变化回调 */
@@ -118,10 +104,16 @@ export const onPluginReady = (callback: () => void): void =>
 /** 注册插件退出/隐藏回调 */
 export const onPluginOut = (callback: (processExit: boolean) => void): void => getApi().onPluginOut(callback);
 
+// ==================== 系统能力 ====================
+
+/** 弹出系统级通知 */
+export const showNotification = (body: string): void => getApi().showNotification(body);
+
+/** 复制文本到剪贴板 */
+export const copyText = (text: string): boolean => getApi().copyText(text);
+
 /** 隐藏主窗口并把文件粘贴到当前光标所在输入框 */
 export const pasteFile = (filePath: string): void => getApi().hideMainWindowPasteFile(filePath);
-
-// ==================== 系统能力 ====================
 
 /** 使用系统默认浏览器打开超链接 */
 export const openLink = (link: string): void => window.openLink(link);
@@ -131,15 +123,15 @@ export const openPath = (path: string): void => getApi().shellOpenPath(path);
 
 // ==================== preload 注入的文件能力 ====================
 
-/** 下载远程图片到本地临时目录,返回 {imgSrc, fileSrc} */
-export const downloadImage = (
-  url: string,
-  options?: DownloadOptions,
-): Promise<{ imgSrc: string; fileSrc: string } | null> => window.downloadImage(url, options);
+/** 读取文本文件,返回文件内容 */
+export const readFileText = (filePath: string): string => window.readFile(filePath);
 
-/** 复制本地图片文件到剪贴板 */
-export const copyImage = (image: { imgSrc: string; fileSrc: string }, callback?: () => void): void =>
-  window.copyImage(image, callback);
+/** 写入文本文件,返回写入路径 */
+export const writeFileText = (filePath: string, content: string): string =>
+  window.writeFile(filePath, content);
 
-/** 移除本地文件(存在才移除) */
+/** 删除文件(存在才删除) */
 export const removeFile = (filePath: string): void => window.removeFile(filePath);
+
+/** 在系统文件管理器中展示文件 */
+export const showItemInFolder = (filePath: string): void => window.showItemInFolder(filePath);

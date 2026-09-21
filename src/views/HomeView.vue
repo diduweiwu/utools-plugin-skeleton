@@ -1,136 +1,181 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
+import { useMessage } from "naive-ui";
 
-import DonateDrawer from "@/components/donate/DonateDrawer.vue";
-import EmoticonList from "@/components/emoticon/EmoticonList.vue";
-import MoreDrawer from "@/components/more/MoreDrawer.vue";
-import StarDrawer from "@/components/star/StarDrawer.vue";
-import SourceSwitcher from "@/components/source/SourceSwitcher.vue";
-import useEmoticons from "@/composables/use-emoticons";
+import {
+  copyText,
+  getPlatformName,
+  onPluginEnter,
+  onPluginOut,
+  readFileText,
+  setSubInput,
+  showItemInFolder,
+  showNotification,
+  userDataDirectory,
+  whenPlatformReady,
+  writeFileText,
+} from "@/platform";
+import { loadJsonStorage, saveJsonStorage } from "@/composables/use-storage";
 
 /**
- * 主页面:顶栏(图源切换/收藏/更多/赞助/分页) + 表情包列表。
- * 必须渲染在 App.vue 的 <n-message-provider> 内部,才能使用消息提示。
+ * 通用示例页:集中演示脚手架接好的平台能力,作为接入自己业务的起点。
+ * - 平台识别与生命周期(onPluginEnter / onPluginOut,关键词与 over 两种触发)
+ * - 副输入框(setSubInput)
+ * - dbStorage 持久化(use-storage 封装)
+ * - 系统通知 / 剪贴板
+ * - preload 注入的 Node 文件能力(读写用户数据目录)
  */
-const starDrawerRef = ref<InstanceType<typeof StarDrawer>>();
 
-const { emoticons, loading, pagination, previousPage, nextPage, reload, loadMore } = useEmoticons(() =>
-  starDrawerRef.value?.close(),
-);
+/** 演示数据统一持久化在 dbStorage,重进插件不丢失 */
+const STORAGE_KEY = "skeleton-demo";
+
+type EnterAction = { code: string; type: string; payload: string };
+type DemoState = { counter: number; note: string; noteFile: string };
+
+const message = useMessage();
+
+const platformLabel = ref(getPlatformName() ?? "模拟器(平台未注入)");
+const enterAction = ref<EnterAction | null>(null);
+const counter = ref(0);
+const subInputText = ref("");
+const note = ref("");
+const noteFile = ref("");
+
+const persist = (): void => {
+  const state: DemoState = { counter: counter.value, note: note.value, noteFile: noteFile.value };
+  saveJsonStorage(STORAGE_KEY, state);
+};
+
+onMounted(() => {
+  whenPlatformReady(() => {
+    const saved = loadJsonStorage<Partial<DemoState>>(STORAGE_KEY);
+    counter.value = saved.counter ?? 0;
+    note.value = saved.note ?? "";
+    noteFile.value = saved.noteFile ?? "";
+
+    // 关键词或 over(选中文字)触发进入都会回调,payload 为触发时携带的内容
+    onPluginEnter((action) => {
+      enterAction.value = action;
+    });
+
+    // 插件隐藏/退出时触发;isKill 为 true 表示进程被结束
+    onPluginOut((isKill) => {
+      if (!isKill) {
+        persist();
+      }
+    });
+
+    // 副输入框内容实时回显到页面
+    setSubInput(({ text }) => {
+      subInputText.value = text;
+    }, "输入内容会实时回显到页面");
+  });
+});
+
+const bumpCounter = (delta: number): void => {
+  counter.value += delta;
+  persist();
+};
+
+const saveNote = (): void => {
+  try {
+    noteFile.value = writeFileText(`${userDataDirectory()}/skeleton-demo.txt`, note.value);
+    persist();
+    message.success("已保存到用户数据目录");
+  } catch (error) {
+    message.error(`保存失败:${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+const readNote = (): void => {
+  try {
+    note.value = readFileText(noteFile.value);
+    persist();
+    message.success("已读取");
+  } catch {
+    message.error("读取失败,文件可能已被移除");
+  }
+};
+
+const locateNote = (): void => {
+  showItemInFolder(noteFile.value);
+};
+
+const copyNote = (): void => {
+  if (copyText(note.value)) {
+    message.success("已复制到剪贴板");
+  } else {
+    message.error("复制失败");
+  }
+};
+
+const notify = (): void => {
+  showNotification("来自插件骨架的系统通知");
+};
 </script>
 
 <template>
-  <n-layout position="absolute">
-    <n-layout-header style="height: 45px" bordered>
-      <n-space justify="space-between" align="center" size="small" style="height: 100%; padding: 0 5px">
-        <SourceSwitcher :reload="reload" :loading="loading" />
-
-        <n-space align="center" size="small">
-          <StarDrawer ref="starDrawerRef" />
-          <DonateDrawer />
-          <MoreDrawer />
-          <!-- 圆形图标分页按钮 -->
-          <n-button
-            title="上一页"
-            circle
-            size="small"
-            :focusable="false"
-            :disabled="loading || !pagination.hasLess.value"
-            @click="previousPage"
-          >
-            <svg
-              class="page-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-          </n-button>
-          <n-tag round size="small" type="primary" class="page-tag">{{ pagination.pageNum.value }}</n-tag>
-          <n-button
-            title="下一页"
-            circle
-            size="small"
-            :focusable="false"
-            :disabled="loading || !pagination.hasMore.value"
-            @click="nextPage()"
-          >
-            <svg
-              class="page-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="m9 18 6-6-6-6" />
-            </svg>
-          </n-button>
+  <n-space vertical size="large" class="demo">
+    <n-card title="平台与生命周期" size="small">
+      <n-space vertical size="small">
+        <n-space align="center">
+          <n-tag type="info">{{ platformLabel }}</n-tag>
+          <n-tag v-if="enterAction" type="success">code: {{ enterAction.code }}</n-tag>
         </n-space>
+        <n-alert v-if="enterAction" :bordered="false">
+          最近一次进入:type={{ enterAction.type }},payload={{ enterAction.payload || "(空)" }}
+        </n-alert>
+        <span class="tip">
+          关键词 hello / 你好 进入本页;也可以选中文字后在搜索框里触发「处理选中文本」,payload 会显示在这里。
+        </span>
       </n-space>
-    </n-layout-header>
-    <n-layout has-sider position="absolute" style="top: 50px">
-      <n-layout content-style="padding: 5px 10px;" :native-scrollbar="false" @scroll="loadMore">
-        <n-spin :show="loading" style="min-height: 300px" description="努力加载中~">
-          <EmoticonList :loading="loading" :emoticons="emoticons" />
-          <!-- 内容高度不足一屏时无法滚动触发瀑布加载,这里提供手动加载入口 -->
-          <div v-if="emoticons.length && pagination.hasMore.value" class="load-more">
-            <n-button
-              size="large"
-              dashed
-              :loading="loading"
-              :focusable="false"
-              class="load-more-btn"
-              @click="nextPage({ isAppend: true })"
-            >
-              加载更多
-            </n-button>
-          </div>
-          <n-back-top :right="40" />
-        </n-spin>
-      </n-layout>
-    </n-layout>
-  </n-layout>
+    </n-card>
+
+    <n-card title="副输入框" size="small">
+      <span :class="{ tip: !subInputText }">
+        {{ subInputText || "(在插件顶部的副输入框输入,内容会实时回显到这里)" }}
+      </span>
+    </n-card>
+
+    <n-card title="dbStorage 持久化" size="small">
+      <n-space align="center">
+        <n-button @click="bumpCounter(-1)">-1</n-button>
+        <n-tag size="large">{{ counter }}</n-tag>
+        <n-button @click="bumpCounter(1)">+1</n-button>
+        <span class="tip">数值存放在平台 dbStorage,退出重进后仍在。</span>
+      </n-space>
+    </n-card>
+
+    <n-card title="preload 注入的 Node 能力" size="small">
+      <n-space vertical size="small">
+        <n-input
+          v-model:value="note"
+          type="textarea"
+          :rows="3"
+          placeholder="写点什么,保存到平台用户数据目录"
+        />
+        <n-space>
+          <n-button type="primary" @click="saveNote">保存</n-button>
+          <n-button :disabled="!noteFile" @click="readNote">读取</n-button>
+          <n-button :disabled="!noteFile" @click="locateNote">在文件夹中显示</n-button>
+          <n-button :disabled="!note" @click="copyNote">复制文本</n-button>
+          <n-button @click="notify">系统通知</n-button>
+        </n-space>
+        <span v-if="noteFile" class="tip">{{ noteFile }}</span>
+      </n-space>
+    </n-card>
+  </n-space>
 </template>
 
 <style scoped>
-.page-icon {
-  display: block;
-  width: 14px;
-  height: 14px;
+.demo {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px;
 }
 
-/* n-tag 是 inline-flex,配 min-width 后需要主轴居中,数字才能停留在圆形中心 */
-.page-tag {
-  min-width: 26px;
-  justify-content: center;
-}
-
-.load-more {
-  display: flex;
-  justify-content: center;
-  padding: 10px 0 18px;
-}
-
-/* 大号虚线胶囊按钮;悬停时橙色高亮 + 光晕,与图片悬停光效呼应 */
-.load-more-btn {
-  width: 260px;
-  transition: box-shadow 0.3s;
-}
-
-.load-more-btn,
-.load-more-btn :deep(.n-button__border) {
-  border-radius: 999px;
-}
-
-.load-more-btn:hover {
-  --n-border-color: rgb(255, 154, 2);
-  color: rgb(255, 154, 2);
-  box-shadow: 0 0 12px rgba(255, 154, 2, 0.35);
+.tip {
+  font-size: 12px;
+  opacity: 0.65;
 }
 </style>

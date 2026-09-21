@@ -1,31 +1,35 @@
 {
-  "pluginName": "斗图表情包",
-  "name": "doutu",
-  "title": "斗图表情包",
-  "description": "在线搜索表情包图片，助你高效斗图",
+  "$schema": "node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
+  "pluginName": "插件骨架",
+  "name": "plugin-skeleton",
+  "title": "插件骨架",
+  "description": "uTools / ZTools 双平台插件脚手架,演示生命周期、存储、preload 等 API 的通用用法",
   "author": "被时间思牵",
   "version": "1.0.0",
   "main": "index.html",
   "preload": "preload/services.js",
   "logo": "logo.png",
   "development": {
-    "main": "http://localhost:5173",
+    "main": "http://localhost:5175",
     "preload": "preload/services.js"
   },
   "features": [
     {
-      "code": "doutu",
-      "explain": "表情包搜索:回车搜索,左击复制图片,中击查看大图,右击加入收藏",
+      "code": "hello",
+      "explain": "脚手架示例:关键词进入,展示平台 API 与生命周期的通用用法",
+      "icon": "logo.png",
+      "cmds": ["hello", "你好"]
+    },
+    {
+      "code": "over-demo",
+      "explain": "脚手架示例:选中文字后触发,演示 payload 的接收",
       "icon": "logo.png",
       "cmds": [
-        "doutu",
-        "斗图",
-        "表情",
         {
           "type": "over",
-          "label": "斗图啦",
+          "label": "插件骨架:处理选中文本",
           "minLength": 1,
-          "maxLength": 20
+          "maxLength": 100
         }
       ]
     }

@@ -1,24 +1,23 @@
-# 基于 Vue 3 + TypeScript + Vite 开发的 ztools 表情包搜索插件
+# utools-plugin-skeleton
 
-```text
-API接口为自己搜索的，如果大家有推荐的表情包接口，欢迎推荐
-其他没啥了，就是一些函数踩坑和学习的过程，在此感谢 斗图 插件的作者，
-参考和学习了插件的一些用法:)
-鸣谢logo作者：https://www.iconfinder.com/icons/7188639/happy_face_emoji_emotion_smile_smiley_emoticons_icon
-```
+uTools / ZTools 双平台通用插件脚手架,基于 Vue 3 + TypeScript + Vite + naive-ui。
 
-## 开发
+两个平台的插件规范基本一致(`plugin.json` + `preload` + 渲染页面,仅全局 API 对象名不同),
+本仓库用**一套源码**同时适配:平台桥接层统一识别、preload 双平台兼容、清单字段两边通用,
+开发、构建、发布的完整链路均已按官方文档打通。
+
+## 快速开始
 
 要求 Node.js `^20.19.0 || >=22.12.0`。
 
 ```bash
-npm install        # 安装依赖
-npm run dev        # 本地开发(vite dev server,配合 ztools/uTools 开发模式)
-npm run build      # 类型检查 + 打包到 dist/
-npm run lint       # ESLint 检查
-npm run format     # Prettier 格式化
-npm run test       # Vitest 单元测试
-npm run check:sources  # 本地一键图源检测(详见下文)
+npm install            # 安装依赖
+npm run dev            # 本地开发(vite dev server,配合 uTools/ZTools 开发模式)
+npm run build          # 类型检查 + 打包到 dist/(即完整插件目录)
+npm run lint           # ESLint 检查
+npm run format         # Prettier 格式化
+npm run test           # Vitest 单元测试
+npm run ztools:publish # 发布到 ZTools 插件市场(见下文)
 ```
 
 工程约定:
@@ -29,6 +28,7 @@ npm run check:sources  # 本地一键图源检测(详见下文)
   naive-ui 组件由 `unplugin-vue-components` 按需自动注册,无需手动 import/安装;
 - 路径别名 `@` 指向 `src/`;
 - 单元测试文件与被测模块同目录,命名为 `*.spec.ts`;
+- 对外发版的更新日志写在 `CHANGELOG.md`(严格 `## 版本号 - YYYY-MM-DD` 格式,`ztools publish` 发布时强制校验);
 - 推送/PR 时 GitHub Actions 自动执行 lint → 类型检查 → 测试 → 构建。
 
 ## 目录结构
@@ -36,131 +36,88 @@ npm run check:sources  # 本地一键图源检测(详见下文)
 ```text
 src/
 ├── main.ts                     # 应用入口(naive-ui 组件自动按需注册)
-├── App.vue                     # 应用外壳:主题 + 全局消息容器(useMessage 只能在其后代使用)
-├── styles/main.css             # 全局样式
-├── types/                      # 共享类型 + 自动生成声明(auto-imports.d.ts / components.d.ts)
-│   └── emoticon.ts             # Emoticon 业务类型
+├── App.vue                     # 应用外壳:跟随系统主题 + 全局消息容器
+├── styles/main.css             # 全局样式(含明暗两套背景)
+├── types/                      # 自动生成的组件/API 声明(unplugin 维护,勿手改)
 ├── platform/                   # 平台桥接层
-│   ├── index.ts                # 全项目唯一触碰平台 API 的地方,同一套代码适配 uTools/ztools
+│   ├── index.ts                # 全项目唯一触碰平台 API 的地方,同一套代码适配 uTools/Ztools
 │   └── window.d.ts             # preload 注入到 window 的能力声明
-├── utils/
-│   └── http.ts                 # 统一 axios 实例(默认超时/拦截器收口)
-├── sources/                    # 图源层(策略模式 + 注册表)
-│   ├── types.ts                # 图源契约(ImageSource / SourceFetch*)
-│   ├── defineSource.ts         # 图源工厂函数(统一标准写法)
-│   ├── registry.ts             # 图源注册表:调度/切换/检测的数据源,新增图源只改这里
-│   ├── health-check.ts         # 图源检测纯逻辑(插件内与 CLI 共用)
-│   ├── sogou.ts 等             # 已上架图源,一个文件一个图源
-│   └── offline/                # 已下架/未上架图源(enabled:false,参与检测,复活可一键上架)
-├── composables/                # Vue 组合式函数(响应式层)
-│   ├── use-emoticons.ts        # 核心调度器:状态机 + 图源调度 + 下载编排 + 分页
-│   ├── use-config.ts           # 配置读写(自动迁移老版本中文 label 配置)
-│   ├── use-download.ts         # 图片批量下载(分批回调/顺序一致性)
-│   ├── use-star-list.ts        # 收藏夹
-│   ├── use-settings.ts         # 常用设置
-│   ├── use-storage.ts          # dbStorage JSON 封装
-│   └── use-source-health-check.ts # 图源检测的响应式封装
-├── views/
-│   └── HomeView.vue            # 主页面:顶栏 + 表情包列表(渲染在消息容器内)
-└── components/                 # UI 组件(按领域分目录)
-    ├── emoticon/               # 表情展示:EmoticonList 网格 / EmoticonItem 单项 / EmoticonViewer 大图预览
-    ├── source/                 # 图源:SourceSwitcher 切换 / SourceHealthCheck 检测面板
-    ├── star/                   # 收藏夹抽屉
-    ├── more/                   # 「更多」聚合入口:MoreDrawer / SettingsPanel / AboutPanel
-    └── donate/                 # 赞助抽屉
+├── composables/
+│   └── use-storage.ts          # dbStorage JSON 读写封装(平台未就绪时安全兜底)
+└── views/
+    └── HomeView.vue            # 通用示例页(见下文「示例页演示了什么」)
 
-scripts/check-sources.ts        # 本地 CLI 一键图源检测(经 tsx 运行,与插件共享同一套源码)
-public/                         # 插件清单 plugin.json / preload / logo
+public/                         # 插件根目录,构建时原样拷贝进 dist/
+├── plugin.json                 # 插件清单(uTools/ZTools 双平台通用字段 + 官方 $schema)
+├── logo.png
+└── preload/
+    ├── package.json            # 固定 CommonJS
+    └── services.js             # preload 示例:直接 require node 内置模块,挂载 window 能力
 ```
+
+> 注意:`src/`(前端源码)与 `public/`(插件清单/preload)各司其职,前者经 Vite 编译、
+> 后者原样拷贝,共同组成 `dist/` 这一个插件目录——项目里只有这一套插件根目录约定。
+
+## 示例页演示了什么
+
+`src/views/HomeView.vue` 是接入自己业务的起点,覆盖了脚手架接好的全部平台能力:
+
+- **平台识别**:当前运行在 ztools / uTools / 未注入(浏览器模拟);
+- **生命周期**:`onPluginEnter`(关键词与 over 选中文字两种触发,payload 展示)、`onPluginOut`;
+- **副输入框**:`setSubInput` 内容实时回显;
+- **持久化**:`dbStorage` 经 `use-storage` 封装读写,退出重进不丢;
+- **系统能力**:系统通知、复制到剪贴板;
+- **preload Node 能力**:读写用户数据目录下的文本文件、在文件管理器中定位。
 
 ## 平台支持
 
-同一套代码同时适配 **uTools** 与 **ztools**：
+同一套代码同时适配 **uTools** 与 **ztools**:
 
 - 平台 API 在 `src/platform/index.ts` 统一识别(`utools` / `ztools` 全局),preload 同样做了双平台兼容;
 - `public/plugin.json` 同时包含两个平台的清单字段(pluginName / name、title 等),关键字两边通用;
-- 收藏目录沿用各自平台的历史命名(uTools: `collectedEmoticons`,ztools: `ztoolsCollectedEmoticons`),老用户收藏不受影响。
+- 插件标识是通用占位名(`plugin-skeleton`),改成自己的名字见下文。
 
-## 图源检测
+## ZTools 插件开发工作流
 
-不用再逐个切换图源人工确认，两个入口都可以一键检测所有图源(含已下架的)是否还能取到图：
+对照 [ZTools 官方开发文档](https://github.com/ZToolsCenter/ZTools-doc)接入,ZTools 与 uTools 的插件规范基本一致,以下均已打通:
 
-```bash
-# 方式一:本地终端直接跑(不依赖插件环境)
-npm run check:sources            # 带指定关键字: npm run check:sources -- 猫猫
+**类型提示** —— `@ztools-center/ztools-api-types` 同时提供 API 类型与清单校验:
+tsconfig `types` 引入全局 `ZToolsApi` 与 `ztools` 声明;`public/plugin.json` 的 `$schema`
+指向包内 `ztools.schema.json`,编辑器可对清单字段做校验与悬浮提示。
 
-# 方式二:插件顶栏「更多」→「图源」Tab,手动点击「图源检测」按钮触发
-```
+**开发调试** —— `npm run dev` 启动 Vite(端口 5173)后,在 ZTools 的开发者工具里
+添加开发项目并选择 `public/plugin.json` 即可(uTools 开发者模式同理):
+`development.main` 会让宿主以 `http://localhost:5173` 加载页面,保存即热更新;
+preload 始终走 `public/preload/services.js`,改它需要在开发者工具里「重载插件」。
 
-进入图源页不会自动发请求,会恢复上次持久化的检测结果(首次为「待检测」占位);检测完成后按状态排序(正常 → 无结果 → 失败)并存储,重新检测前保持不变。
-检测会真实请求每个图源的第一页并解析(不下载图片)，报告 状态(正常/无结果/超时/失败)、耗时、图片数。
-`无结果` 通常说明站点改版、解析选择器失效;`超时/失败` 说明站点可能挂了。
+**构建产物** —— `npm run build` 输出的 `dist/` 就是完整的插件应用目录
+(`index.html` + `assets/` + `plugin.json` + `preload/` + `logo.png`),直接拿这个文件夹
+安装/分发即可;注意不要把整个项目根目录打包进去。`base: './'` 相对路径已适配宿主的 `file://` 加载。
 
-列表里的开关控制图源是否在顶部展示(至少保留一个,实时生效):已上架、检测正常、或当前已开启的图源都提供开关,由用户决定;已下架且关闭的图源不显示。
+**发布到插件市场** —— `npm run ztools:publish`(官方 [@ztools-center/plugin-cli](https://github.com/ZToolsCenter/ztools-plugin-cli)):
 
-## 如何新增一个图源
+1. CLI 自动识别本项目的 `public/plugin.json`(官方三种支持位置之一,本项目只用这一种,不存在两套目录);
+2. 前置校验:git 工作区必须干净,且 `CHANGELOG.md` 存在当前版本的 `## 版本号 - YYYY-MM-DD` 小节(格式严格);
+3. 首次发布走 GitHub OAuth 授权,CLI 自动 fork `ZToolsCenter/ZTools-plugins`、以源码形式同步并创建 Draft PR(自动排除 node_modules/dist);
+4. 发布后手动完成三件事才会进入审核:PR 里附截图/演示 GIF、勾选自检清单、切到 Ready for review。
 
-1. 在 `src/sources/` 下新建 `<id>.ts`，照抄任意现有图源，用 `defineSource({...})` 声明:
-   - 必填: `id`(英文唯一标识)、`label`(展示名)、`host`(官网)、`fetchPage({keyword, page, pageSize})`
-   - `fetchPage` 只负责「请求 + 解析」，返回 `{links, downloadOptions?, hasMore?, hasLess?}`，不要下载图片
-   - 选填: `timeout`(慢图源放宽)、`defaultKeyword`(空关键字兜底)、`note`(备注)
-2. 在 `src/sources/registry.ts` 的数组里注册一行
+## 改成你自己的插件
 
-切换器、关于页、一键检测会自动感知新图源，其他代码零改动(开闭原则)。
-某图源站点复活时，把 `offline/` 里对应图源的 `enabled: false` 删掉即可重新上架。
+仓库内的插件标识是通用的占位名(`plugin-skeleton`),基于它开发自己的插件时,把以下字段改成你自己的信息即可:
+
+| 文件                           | 字段                                 | 说明                                                                            |
+| ------------------------------ | ------------------------------------ | ------------------------------------------------------------------------------- |
+| `public/plugin.json`           | `name`                               | 插件唯一 ID,同时也是 ZTools 市场目录名,发布后不可变更                           |
+| `public/plugin.json`           | `pluginName` / `title`               | 插件展示名称                                                                    |
+| `public/plugin.json`           | `description` / `author` / `version` | 描述、作者、版本号                                                              |
+| `public/plugin.json`           | `features[].code` / `cmds`           | 功能标识与触发词,按你的功能语义修改                                             |
+| `package.json`                 | `name` / `description`               | npm 包名,建议与插件 ID 保持一致                                                 |
+| `index.html`                   | `<title>`                            | 页面标题                                                                        |
+| `logo.svg` / `public/logo.png` | 整个文件                             | 默认图标:改 `logo.svg` 的配色/造型后重新导出 512×512 PNG 覆盖 `public/logo.png` |
+
+`src/views/HomeView.vue` 与 `public/preload/services.js` 是两段通用示例,可以直接改写成你的业务;
+平台桥接层 `src/platform/` 与清单结构保持原样即可,新增平台 API 时在桥接层补对应封装。
 
 ## 更新日志
 
-- 2026-09-21
-
-```text
-1.工程现代化:升级 Vite 8 / TypeScript 5.9 / vue-tsc 3 / ESLint 10,开启 TS strict 全量检查
-2.逻辑层(composables/sources/platform/utils)由 .js + JSDoc 全面迁移为 .ts,图源接口响应补充类型
-3.所有组件迁移为 <script setup lang="ts">;naive-ui 组件改由 unplugin-vue-components 按需自动注册
-4.vue API 由 unplugin-auto-import 自动导入;新增 @ 路径别名
-5.新增 ESLint(flat config) + Prettier + EditorConfig + Vitest 单元测试 + GitHub Actions CI
-6.目录按领域重组:页面拆到 views/,组件按 emoticon/source/star/more/donate 分目录并更名
-7.修复关于页收款码图片使用 /src 绝对路径导致打包后 404 的问题
-8.check:sources 脚本迁移为 TypeScript(经 tsx 运行),与插件共享同一套类型化源码
-9.收藏列表 computed 移除副作用,缺失文件补下载统一收敛到收藏夹打开/收藏动作
-```
-
-- 2026-09-19
-
-```text
-1.架构重构:图源改造为「策略模式+注册表」，新增图源只需加一个文件注册一行
-2.拆分职责:图源只负责请求+解析，下载/超时/分页由调度器统一编排
-3.新增 一键图源体检(插件内顶栏按钮 + 本地 npm run check:sources 命令)
-4.新增 platform 平台桥接层，平台 API 统一收口
-5.老配置(中文图源名)自动迁移，无需手动处理
-6.修复开发模拟器下平台注入晚于页面脚本导致的启动报错(平台就绪等待机制)
-7.修复 useMessage 在消息容器外调用导致的启动报错(App 拆分为外壳+Home)
-8.恢复 uTools 平台支持:平台全局双识别(ztools/utools),清单与 preload 双平台兼容
-9.修复体检列表状态不刷新的问题
-10.修复首次加载时输入框(副输入框)挂载失败:进入/就绪信号时幂等补挂
-11.顶栏新增「更多」聚合入口:图源体检/设置/关于 以左侧 Tab 整合，设置独立成页;体检面板检测中全行显示占位状态
-12.顶栏改版:新增「打赏」入口,分页改为圆形图标按钮+圆形页码
-13.修复收藏图片下载到错误目录导致收藏夹显示破损的问题;preload 下载增加错误处理/超时/并发去重;轮播预览修复首次打开定位到第一张的问题
-14.收藏增加平台 1M 存储上限保护:超限拒绝收藏并提示;收藏项存储去掉无消费的冗余字段,容量翻倍
-15.默认搜索关键字统一为「表情」(搜索框为空时自动回填);修复图源返回无效链接导致的下载报错
-16.「图源体检」Tab 更名「图源」:图源开关移入图源列表(至少保留一个,实时生效);进入不再自动检测,手动触发按钮改为「图源检测」
-17.检测正常的图源(含已下架)在图源列表统一显示开关,已下架图源检测正常后可手动启用
-18.检测结果持久化:进入图源页恢复上次结果,完成后按状态排序(正常→无结果→失败)并存储,重新检测前不变;已失效但处于开启状态的图源同样显示开关,由用户决定去留;检测正常的图源不再显示「已下架」标记
-19.图片列表改纯 CSS 响应式网格:伸缩宽度时多余空间均匀分配到图片间隔与列表左右留白(space-evenly),宽度足够时自动增加每行数量
-20.图源列表的图源名称可点击,跳转对应官方主页
-21.加载中切换图源/搜索/翻页时,立即中止上一轮在途的 axios 请求(AbortController 信号经 fetchPage 契约透传),迟到的响应与下载批次按序号丢弃,不渲染也不误报失败
-22.「打赏」文案全部改为「赞助」;顶栏收藏/更多/赞助按钮字号加大,与图源名称一致
-23.顶栏「赞助」与「更多」互换位置,赞助文案前加 💰 图标;轮播左右按钮加大,打开轮播后支持键盘左右方向键切换图片
-```
-
-- 2026-04-26
-
-```text
-1.第一次发布，从utools移植过来
-2.期待ztools能持续更新和升级
-```
-
-## 欢迎捐赠
-
-<img src="src/assets/wechat.jpg" width="200" height="300" alt="微信">
-<img src="src/assets/alipay.jpg" width="200" height="300" alt="支付宝">
+见 [CHANGELOG.md](CHANGELOG.md)。
