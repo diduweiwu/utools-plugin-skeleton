@@ -1,5 +1,5 @@
 {
-  "$schema": "node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
+  "$schema": "../node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
   "pluginName": "插件骨架",
   "name": "plugin-skeleton",
   "title": "插件骨架",
